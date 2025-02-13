@@ -137,8 +137,14 @@ func handleDelivery(deliveries <-chan amqp.Delivery) {
 		var message ConsumerMessage
 		err := json.Unmarshal(d.Body, &message)
 		if err != nil {
+			d.Nack(false, false)
 			continue
 		}
+		//store the job in the status db
+
+		//spin up a container for processing the video
+
 		log.Println(message.BucketName + " " + message.Key)
+		d.Ack(false)
 	}
 }
