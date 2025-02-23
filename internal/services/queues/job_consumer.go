@@ -7,7 +7,10 @@ import (
 	"log"
 	"os"
 
+	"github.com/SunilKividor/Captain/internal/config"
+	"github.com/SunilKividor/Captain/internal/services/workers"
 	"github.com/SunilKividor/Captain/pkg/utils"
+	"github.com/aws/aws-sdk-go/aws/session"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -140,11 +143,21 @@ func handleDelivery(deliveries <-chan amqp.Delivery) {
 			d.Nack(false, false)
 			continue
 		}
-		//store the job in the status db
-
 		//spin up a container for processing the video
-
-		log.Println(message.BucketName + " " + message.Key)
-		d.Ack(false)
+		go runVideoTranscoding(d, message)
 	}
+}
+
+func runVideoTranscoding(d amqp.Delivery, message ConsumerMessage) {
+	log.Println(message.BucketName + " " + message.Key)
+	awsConfigModel := config.NewAwsConfigModel()
+	awsConfig := awsConfigModel.NewAwsConfig()
+	ecssession, err := session.NewSession(&awsConfig)
+	utils.FailOnErrorWithoutPanic(err, "Error creating new ecs session")
+
+	ecsJobConfig := workers.NewECSJobConfig(ecssession, &message.BucketName, &message.Key)
+	err = ecsJobConfig.RunECSJob()
+	utils.FailOnErrorWithoutPanic(err, "Error running the job")
+
+	d.Ack(false)
 }
