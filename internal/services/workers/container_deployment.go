@@ -14,6 +14,8 @@ type ECSJobConfig struct {
 	Container      *string
 	Cluster        *string
 	TaskDefinition *string
+	SubnetIDs      []*string
+	SecurityGroup  *string
 	Session        *session.Session
 	BucketName     *string
 	Key            *string
@@ -23,10 +25,16 @@ func NewECSJobConfig(session *session.Session, bucketName *string, Key *string) 
 	ecsCluster := os.Getenv("CLUSTER")
 	container := os.Getenv("CONTAINER")
 	taskDefinition := os.Getenv("TASK_DEFINITION")
+	securityGroup := os.Getenv("SECURITY_GROUP")
+	subnetID1 := os.Getenv("SUBNET1")
+	subnetID2 := os.Getenv("SUBNET2")
+	subnetIDs := []*string{&subnetID1, &subnetID2}
 	return &ECSJobConfig{
 		Container:      &container,
 		Cluster:        &ecsCluster,
 		TaskDefinition: &taskDefinition,
+		SubnetIDs:      subnetIDs,
+		SecurityGroup:  &securityGroup,
 		Session:        session,
 		BucketName:     bucketName,
 		Key:            Key,
@@ -61,8 +69,8 @@ func (ecsJob *ECSJobConfig) RunECSJob() error {
 	networkConfiguration := &ecs.NetworkConfiguration{
 		AwsvpcConfiguration: &ecs.AwsVpcConfiguration{
 			AssignPublicIp: aws.String("ENABLED"),
-			SecurityGroups: []*string{aws.String("sg-04bb500c0f2d9da67")},
-			Subnets:        []*string{aws.String("subnet-0b7caf04e9f3a7bd6"), aws.String("subnet-0ee390b425d585f1b")},
+			SecurityGroups: []*string{ecsJob.SecurityGroup},
+			Subnets:        ecsJob.SubnetIDs,
 		},
 	}
 
