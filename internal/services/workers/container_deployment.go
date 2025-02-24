@@ -38,7 +38,11 @@ func (ecsJob *ECSJobConfig) RunECSJob() error {
 
 	updatedENV := []*ecs.KeyValuePair{
 		{
-			Name:  ecsJob.BucketName,
+			Name:  aws.String("bucket"),
+			Value: ecsJob.BucketName,
+		},
+		{
+			Name:  aws.String("key"),
 			Value: ecsJob.Key,
 		},
 	}
@@ -54,16 +58,25 @@ func (ecsJob *ECSJobConfig) RunECSJob() error {
 		ContainerOverrides: containerOverrides,
 	}
 
+	networkConfiguration := &ecs.NetworkConfiguration{
+		AwsvpcConfiguration: &ecs.AwsVpcConfiguration{
+			AssignPublicIp: aws.String("ENABLED"),
+			SecurityGroups: []*string{aws.String("sg-04bb500c0f2d9da67")},
+			Subnets:        []*string{aws.String("subnet-0b7caf04e9f3a7bd6"), aws.String("subnet-0ee390b425d585f1b")},
+		},
+	}
+
 	ecsRunTaskInput := &ecs.RunTaskInput{
-		Cluster:        ecsJob.Cluster,
-		TaskDefinition: ecsJob.TaskDefinition,
-		Count:          aws.Int64(1),
-		LaunchType:     aws.String("FARGATE"),
-		Overrides:      taskOverride,
+		Cluster:              ecsJob.Cluster,
+		TaskDefinition:       ecsJob.TaskDefinition,
+		Count:                aws.Int64(1),
+		LaunchType:           aws.String("FARGATE"),
+		Overrides:            taskOverride,
+		NetworkConfiguration: networkConfiguration,
 	}
 
 	runTaskOutput, err := ecsClient.RunTask(ecsRunTaskInput)
-	utils.FailOnErrorWithoutPanic(err, "Error Running Task")
+	utils.FailOnError(err, "Error Running Task")
 
 	fmt.Printf("Task started with ARN: %s\n", *runTaskOutput.Tasks[0].TaskArn)
 	return err

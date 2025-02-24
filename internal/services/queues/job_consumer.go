@@ -152,12 +152,14 @@ func runVideoTranscoding(d amqp.Delivery, message ConsumerMessage) {
 	log.Println(message.BucketName + " " + message.Key)
 	awsConfigModel := config.NewAwsConfigModel()
 	awsConfig := awsConfigModel.NewAwsConfig()
-	ecssession, err := session.NewSession(&awsConfig)
-	utils.FailOnErrorWithoutPanic(err, "Error creating new ecs session")
+
+	ecssession, err := session.NewSession(awsConfig)
+	utils.FailOnError(err, "Error creating new ecs session")
 
 	ecsJobConfig := workers.NewECSJobConfig(ecssession, &message.BucketName, &message.Key)
+
 	err = ecsJobConfig.RunECSJob()
-	utils.FailOnErrorWithoutPanic(err, "Error running the job")
+	utils.FailOnError(err, "Error running the job")
 
 	d.Ack(false)
 }
